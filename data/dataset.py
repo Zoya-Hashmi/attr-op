@@ -63,17 +63,25 @@ class CompositionDataset(tdata.Dataset):
         self.transform = imagenet_transform(phase)
         self.loader = ImageLoader(self.root+'/images/')
 
-        self.attrs, self.objs, self.pairs, self.train_pairs, self.test_pairs = self.parse_split()
-        assert len(set(self.train_pairs)&set(self.test_pairs))==0, 'train and test are not mutually exclusive'
+        (self.attrs, self.objs, self.pairs, 
+        self.train_pairs, self.val_pairs, self.test_pairs) = self.parse_split()
 
-        self.train_data, self.test_data = self.get_split_info()
-        self.data = self.train_data if self.phase=='train' else self.test_data
+        # assert len(set(self.train_pairs)&set(self.test_pairs))==0, 'train and test are not mutually exclusive'
+
+        self.train_data, self.val_data, self.test_data = self.get_split_info()
+        
+        if self.phase=='train':
+            self.data = self.train_data
+        elif self.phase=='val':
+            self.data = self.val_data
+        elif self.phase=='test':
+            self.data = self.test_data
 
         self.attr2idx = {attr: idx for idx, attr in enumerate(self.attrs)}
         self.obj2idx = {obj: idx for idx, obj in enumerate(self.objs)}
         self.pair2idx = {pair: idx for idx, pair in enumerate(self.pairs)}
 
-        print ('# train pairs: %d | # test pairs: %d'%(len(self.train_pairs), len(self.test_pairs)))
+        print ('# train pairs: %d | # test pairs: %d | # val pairs: %d'%(len(self.train_pairs), len(self.test_pairs),len(self.val_pairs)))
 
         # fix later -- affordance thing
         # return {object: all attrs that occur with obj}
@@ -87,26 +95,33 @@ class CompositionDataset(tdata.Dataset):
             self.train_obj_affordance[_obj] = list(set(candidates))
         
     def get_split_info(self):
-
         data = torch.load(self.root+'/metadata.t7')
         train_pair_set = set(self.train_pairs)
-        train_data, test_data = [], []
+        test_pair_set = set(self.test_pairs)
+        train_data, val_data, test_data = [], [], []
+
+
+        print("natural split "+self.phase)
         for instance in data:
+            image, attr, obj, settype = instance['image'], instance['attr'], instance['obj'], instance['set']
 
-            image, attr, obj = instance['image'], instance['attr'], instance['obj']
-
-            if attr=='NA' or (attr, obj) not in self.pairs:
+            if attr=='NA' or (attr, obj) not in self.pairs or settype=='NA':
                 # ignore instances with unlabeled attributes
                 # ignore instances that are not in current split
                 continue
-
+                
             data_i = [image, attr, obj]
-            if (attr, obj) in train_pair_set:
-                train_data.append(data_i)
-            else:
-                test_data.append(data_i)
 
-        return train_data, test_data
+            if settype == 'train':
+                train_data.append(data_i)
+            elif settype == 'val':
+                val_data.append(data_i)
+            elif settype == 'test':
+                test_data.append(data_i)
+            else:
+                raise NotImplementedError(settype)
+
+        return train_data, val_data, test_data
 
     def parse_split(self):
 
@@ -119,12 +134,14 @@ class CompositionDataset(tdata.Dataset):
             return attrs, objs, pairs
 
         tr_attrs, tr_objs, tr_pairs = parse_pairs('%s/%s/train_pairs.txt'%(self.root, self.split))
+        val_attrs, val_objs, val_pairs = parse_pairs('%s/%s/val_pairs.txt'%(self.root, self.split))
         ts_attrs, ts_objs, ts_pairs = parse_pairs('%s/%s/test_pairs.txt'%(self.root, self.split))
 
-        all_attrs, all_objs =  sorted(list(set(tr_attrs+ts_attrs))), sorted(list(set(tr_objs+ts_objs)))    
-        all_pairs = sorted(list(set(tr_pairs + ts_pairs)))
+        all_attrs =  sorted(list(set(tr_attrs + val_attrs + ts_attrs)))
+        all_objs = sorted(list(set(tr_objs + val_objs + ts_objs)))    
+        all_pairs = sorted(list(set(tr_pairs + val_pairs + ts_pairs)))
 
-        return all_attrs, all_objs, all_pairs, tr_pairs, ts_pairs
+        return all_attrs, all_objs, all_pairs, tr_pairs, val_pairs, ts_pairs
 
     def sample_negative(self, attr, obj):
         new_attr, new_obj = self.train_pairs[np.random.choice(len(self.train_pairs))]

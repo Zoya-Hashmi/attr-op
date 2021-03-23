@@ -59,15 +59,32 @@ def test(epoch):
         _, predictions = model(data)
         
         attr_truth, obj_truth = data[1], data[2]
-        results = evaluator.score_model(predictions, obj_truth)
-        match_stats = evaluator.evaluate_predictions(results, attr_truth, obj_truth)
+        results = evaluator.score_model(predictions, obj_truth, 0)
+        match_stats = evaluator.evaluate_predictions(results, attr_truth, obj_truth, 1)
         accuracies.append(match_stats)
 
     accuracies = zip(*accuracies)
     accuracies = map(torch.mean, map(torch.cat, accuracies))
-    attr_acc, obj_acc, closed_acc, open_acc, objoracle_acc = accuracies
+    attr_acc, obj_acc, closed_acc, open_acc, objoracle_acc, open_seen_acc, open_unseen_acc = accuracies
+    print(
+            '(val-causal) E:%d|A:%.3f|O:%.3f|Cl:%.3f|Op:%.4f|OpHM:%.4f|OpAvg:%.4f|OpSeen:%.4f|OpUnseen:%.4f|OrO:%.4f|maP:%.4f|bias:%.3f'
+            % (
+                epoch,
+                attr_acc,
+                obj_acc,
+                closed_acc,
+                open_acc,
+                (open_seen_acc * open_unseen_acc)**0.5,
+                0.5 * (open_seen_acc + open_unseen_acc),
+                open_seen_acc,
+                open_unseen_acc,
+                objoracle_acc,
+                0,
+                0,
+            ))
 
-    print ('(test) E: %d | A: %.3f | O: %.3f | Cl: %.3f | Op: %.4f | OrO: %.4f'%(epoch, attr_acc, obj_acc, closed_acc, open_acc, objoracle_acc))
+    # attr_acc, obj_acc, closed_acc, open_acc, objoracle_acc = accuracies
+    # print ('(test) E: %d | A: %.3f | O: %.3f | Cl: %.3f | Op: %.4f | OrO: %.4f'%(epoch, attr_acc, obj_acc, closed_acc, open_acc, objoracle_acc))
 
 #----------------------------------------------------------------#
 
@@ -84,9 +101,10 @@ elif args.model =='attributeop':
     model = models.AttributeOperator(testset, args)
 model.cuda()
 
-evaluator = models.Evaluator(testset, model)
+evaluator = models.Evaluator(testset)
 
 checkpoint = torch.load(args.load)
+# print(checkpoint)
 model.load_state_dict(checkpoint['net'])
 start_epoch = checkpoint['epoch']
 print ('loaded model from', os.path.basename(args.load))
