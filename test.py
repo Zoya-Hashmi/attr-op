@@ -7,7 +7,6 @@ import numpy as np
 import tqdm
 from data import dataset as dset
 import torchvision.models as tmodels
-import tqdm
 from models import models
 import os
 import itertools
@@ -57,6 +56,7 @@ def test(epoch):
 
         data = [d.cuda() for d in data]
         _, predictions = model(data)
+        print(type(predictions))
         
         attr_truth, obj_truth = data[1], data[2]
         results = evaluator.score_model(predictions, obj_truth, 0)

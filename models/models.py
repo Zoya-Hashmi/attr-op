@@ -56,7 +56,7 @@ class MLP(nn.Module):
 class Evaluator:
     """modified from TMN"""
 
-    def __init__(self, dset):
+    def __init__(self, dset,model):
 
         self.dset = dset
 
@@ -71,16 +71,16 @@ class Evaluator:
         self.pairs = torch.LongTensor(pairs)
 
         # mask over pairs that occur in closed world
-        # if dset.phase == 'train':
-        #     print('Evaluating with train pairs')
-        #     test_pair_set = set(dset.train_pairs)
-        # elif dset.phase == 'val':
-        #     print('Evaluating with val pairs')
-        #     test_pair_set = set(dset.val_pairs + dset.train_pairs)
-        # else:
-        #     print('Evaluating with test pairs')
-        #     test_pair_set = set(dset.test_pairs + dset.train_pairs)
-        test_pair_set = set(dset.test_pairs + dset.train_pairs)
+        if dset.phase == 'train':
+            print('Evaluating with train pairs')
+            test_pair_set = set(dset.train_pairs)
+        elif dset.phase == 'val':
+            print('Evaluating with val pairs')
+            test_pair_set = set(dset.val_pairs + dset.train_pairs)
+        else:
+            print('Evaluating with test pairs')
+            test_pair_set = set(dset.test_pairs + dset.train_pairs)
+        # test_pair_set = set(dset.test_pairs + dset.train_pairs)
         
         self.test_pairs = [(dset.attr2idx[attr], dset.obj2idx[obj])
                            for attr, obj in list(test_pair_set)]
