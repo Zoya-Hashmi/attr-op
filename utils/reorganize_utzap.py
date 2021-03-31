@@ -12,7 +12,7 @@ import glob
 import shutil
 import tqdm
 
-root = 'data/ut-zap50k/'
+root = 'ut-zap50k-original/'
 os.makedirs(root+'/images')
 
 data = torch.load(root+'/metadata.t7')
