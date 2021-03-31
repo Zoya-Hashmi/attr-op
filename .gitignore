@@ -1,9 +1,4 @@
-data/glove
-data/ut-zap50k/images
-data/ut-zap50k/svm
-data/mit-states/images
-data/mit-states/svm
-data/mit-states/features.t7
-data/antonyms.txt
-tensor-completion
-cv
+ut-zap50k-original/
+mit-states-original/
+ut-zap50k-natural/
+mit-states-natural/
